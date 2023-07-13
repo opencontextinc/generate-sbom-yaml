@@ -25,6 +25,9 @@ runs:
       uses: advanced-security/sbom-generator-action@v0.0.1
       env:
         GITHUB_TOKEN: ${{ github.token }}
+    # FIXME: Fix before publishing!
+    # This action is somehow not working.
+    # Runs into cannot stat file error even though the file is clearly there
     - id: upload-sbom-release
       name: Upload SBOM as release artifact
       if: ${{ github.event_name == 'release' }}
@@ -50,6 +53,9 @@ runs:
       with:
         type: sbom
         url: ${{ steps.get-sbom-url.outputs.url }}
+    # FIXME: Fix before publishing!
+    # This action is somehow not working.
+    # Runs into cannot stat file error even though the file is clearly there
     - id: upload-context-release
       name: Upload Context as release artifact
       if: ${{ inputs.upload_context == 'true' }}
