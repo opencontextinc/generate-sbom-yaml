@@ -1,75 +1,82 @@
 name: 'Generate SBOM (SPDX) and Context'
-description: 'Generate SBOM (SPDX) and OpenContext Context about the SBOM'
+description: 'Generate SBOM (SPDX) and OpenContext SBOM artifact YAML'
 inputs:
-  upload_context:
-    description: 'Upload context to release?'
+  upload_yaml:
+    description: 'Upload OpenContext SBOM artifact YAML to release?'
     required: true
     default: 'true'
 outputs:
   sbom_path:
     description: 'The path of the SBOM generated'
     value: ${{ steps.generate-sbom.outputs.fileName }} 
-  sbom_download_url:
+  sbom_url:
     description: 'The release URL where the SBOM can be downloaded from'
-    value: ${{ steps.get-sbom-url.outputs.url }}
-  context_path:
-    description: 'The path of the SBOM Context'
-    value: ${{ steps.generate-context.outputs.filename }}
-  context_url:
-    description: 'The release URL where the context can be downloaded from if uploaded'
-    value: ${{ steps.get-context-url.outputs.url }}
+    value: ${{ steps.check-prereqs.outputs.sbomUrl }}
+  artifact_path:
+    description: 'The path of the OpenContext SBOM artifact YAML'
+    value: ${{ github.workspace }}/${{ steps.generate-artifact-yaml.outputs.filename }}
+  artifact_url:
+    description: 'The release URL of the OpenContext SBOM artifact YAML or WORKSPACE_ARTIFACT if upload_yaml is false'
+    value: ${{ steps.check-prereqs.outputs.artifactUrl }}
 runs:
   using: 'composite'
   steps:
+    - id: check-prereqs
+      name: Check pre-requisites
+      shell: bash
+      run: |
+        if [[ ${GITHUB_EVENT_NAME} != "release" ]]; then 
+          echo "ERROR: This GitHub action only supports the release event!"
+          exit 1
+        fi
+        artifactFile="oc-artifact-yaml.tgz"
+        shortSHA=$(echo $GITHUB_SHA | head -c7)
+        repoName=$(basename $GITHUB_REPOSITORY)
+        sbomFilename="${repoName}-${shortSHA}-sbom-spdx.json"
+        releaseHtmlUrl=$(jq -r '.release.html_url' $GITHUB_EVENT_PATH)
+        releaseTag=$(basename $releaseHtmlUrl)
+        sbomUrl="${releaseHtmlUrl%%/releases/*}/releases/download/${releaseTag}/${sbomFilename}"
+        if [[ ${{ inputs.upload_yaml }} == "true" ]]; then
+          artifactUrl="${releaseHtmlUrl%%/releases/*}/releases/download/${releaseTag}/${artifactFile}"
+        else
+          artifactUrl=WORKSPACE_ARTIFACT
+        fi
+        echo "artifactFile=${artifactFile}" >> "$GITHUB_OUTPUT"
+        echo "artifactUrl=${artifactUrl}" >> "$GITHUB_OUTPUT"
+        echo "sbomFilename=${sbomFilename}" >> "$GITHUB_OUTPUT"
+        echo "sbomUrl=${sbomUrl}" >> "$GITHUB_OUTPUT"
     - id: generate-sbom
+      name: Generate SBOM
       uses: advanced-security/sbom-generator-action@v0.0.1
       env:
         GITHUB_TOKEN: ${{ github.token }}
-    # FIXME: Fix before publishing!
-    # This action is somehow not working.
-    # Runs into cannot stat file error even though the file is clearly there
     - id: upload-sbom-release
       name: Upload SBOM as release artifact
-      if: ${{ github.event_name == 'release' }}
-      uses: JasonEtco/upload-to-release@v0.1.1
+      uses: Shopify/upload-to-release@v1.0.1
       with:
-        args: ${{ steps.generate-sbom.outputs.fileName }} application/json
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-    - id: get-sbom-url
-      shell: bash
-      run: |
-        url=''
-        if [[ ${GITHUB_EVENT_NAME} == "release" ]]; then
-          url="$(jq -r '.release.html_url')/${{ steps.generate-sbom.outputs.fileName }}"
-        else
-          echo "ERROR: Unable to automatically generate URL of SBOM."
-          exit 1
-        fi
-        echo "url=${url}" >> "$GITHUB_OUTPUT"
-    - uses: opencontextinc/artifact-context@v0.1.0
-      id: generate-context
-      name: Generate context about the SBOM
+        name: ${{ steps.check-prereqs.outputs.sbomFilename }}
+        path: ${{ steps.generate-sbom.outputs.fileName }}
+        repo-token: ${{ github.token }}
+        content-type:  application/json
+    - id: generate-artifact-yaml
+      name: Generate OpenContext artifact YAML for SBOM
+      uses: opencontextinc/create-artifact-yaml@v1.0.0
       with:
         type: sbom
-        url: ${{ steps.get-sbom-url.outputs.url }}
-    # FIXME: Fix before publishing!
-    # This action is somehow not working.
-    # Runs into cannot stat file error even though the file is clearly there
-    - id: upload-context-release
-      name: Upload Context as release artifact
-      if: ${{ inputs.upload_context == 'true' }}
-      uses: JasonEtco/upload-to-release@v0.1.1
+        url: ${{ steps.check-prereqs.outputs.sbomUrl }}
+    - id: upload-artifact-yaml-release
+      name: Upload OpenContext artifact YAML as release artifact
+      if: ${{ inputs.upload_yaml == 'true' }}
+      uses: Shopify/upload-to-release@v1.0.1
       with:
-        args: ${{ steps.generate-context.outputs.filename }} application/yaml
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-    - id: get-context-url
-      shell: bash
-      run: |
-        url='N/A'
-        if [[ "${{ inputs.upload_context }}" == "true" ]]; then
-          url="$(jq -r '.release.html_url')/${{ steps.generate-context.outputs.filename }}"
-        else
-        fi
-        echo "url=${url}" >> "$GITHUB_OUTPUT"
+        name: ${{ steps.check-prereqs.outputs.artifactFile }}
+        path: ${{ steps.generate-artifact-yaml.outputs.filename }}
+        repo-token: ${{ github.token }}
+        content-type: application/gzip
+    - id: upload-artifact-yaml-workspace
+      name: Upload OpenContext artifact YAML as workspace artifact
+      if: ${{ inputs.upload_yaml != 'true' }}
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: ${{ steps.check-prereqs.outputs.artifactFile }}
+        path: ${{ steps.generate-artifact-yaml.outputs.filename }}
