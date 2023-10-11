@@ -1,5 +1,8 @@
 name: 'Generate SBOM (SPDX) and Context'
 description: 'Generate SBOM (SPDX) and OpenContext SBOM artifact YAML'
+branding:
+  icon: 'map'
+  color: 'blue'
 inputs:
   upload_yaml:
     description: 'Upload OpenContext SBOM artifact YAML to release?'
