@@ -1,5 +1,5 @@
-name: 'Generate SBOM (SPDX) and Context'
-description: 'Generate SBOM (SPDX) and OpenContext SBOM artifact YAML'
+name: 'Generate SBOM YAML'
+description: 'Generate SBOM (SPDX) and OpenContext artifact YAML'
 branding:
   icon: 'map'
   color: 'blue'

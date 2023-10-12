@@ -1,6 +1,6 @@
-# sbom-artifact-context
+# generate-sbom-yaml
 
-This GitHub Action uses the GitHub dependency graph to generate a SBOM in SPDX format and an OpenContext YAML definition for the SBOM.
+This GitHub Action uses the GitHub dependency graph to generate a SBOM in SPDX format and an OpenContext artifact YAML definition for the SBOM.
 
 **NOTE**: This GitHub action does not keep the GitHub dependency graph updated.
 ## Usage
