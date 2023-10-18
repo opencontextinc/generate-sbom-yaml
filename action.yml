@@ -50,9 +50,7 @@ runs:
         echo "sbomUrl=${sbomUrl}" >> "$GITHUB_OUTPUT"
     - id: generate-sbom
       name: Generate SBOM
-      uses: advanced-security/sbom-generator-action@v0.0.1
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
+      uses: advanced-security/sbom-generator-action@v1
     - id: upload-sbom-release
       name: Upload SBOM as release artifact
       uses: Shopify/upload-to-release@v1.0.1
