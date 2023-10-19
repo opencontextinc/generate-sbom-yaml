@@ -63,7 +63,7 @@ runs:
         content-type:  application/json
     - id: generate-artifact-yaml
       name: Generate OpenContext artifact YAML for SBOM
-      uses: opencontextinc/create-artifact-yaml@v1.0.0
+      uses: opencontextinc/create-artifact-yaml@v1
       with:
         type: sbom
         url: ${{ steps.check-prereqs.outputs.sbomUrl }}
